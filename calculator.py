@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 """
-Moderner Taschenrechner mit Flet GUI Framework.
+Moderner Taschenrechner mit CustomTkinter GUI Framework.
 Unterstützt Tastatur- und Mauseingaben auf ARM64 Windows 11.
 """
 
-import flet as ft
+import customtkinter as ctk
 import operator
 from typing import Optional
 
 
 class Calculator:
-    """Hauptklasse für den Flet-Taschenrechner."""
+    """Hauptklasse für den CustomTkinter-Taschenrechner."""
 
     def __init__(self):
         """Initialisiere den Taschenrechner."""
         self.display_value = "0"
-        self.current_number = ""
+        self.current_number = "0"
         self.previous_number = ""
         self.operation = None
         self.reset_display = False
+        self.show_operation = False  # Zeige Eingabe im Display
+        self.calculation_history = ""  # Vollständiger Berechnungsstring
 
         # Operatoren-Mapping
         self.operations = {
@@ -28,140 +30,145 @@ class Calculator:
             "÷": operator.truediv  # Geteilt-Zeichen
         }
 
-    def main(self, page: ft.Page):
-        """Hauptfunktion für die Flet-App."""
-        page.title = "Moderner Taschenrechner"
-        page.window_width = 320
-        page.window_height = 480
-        page.window_resizable = False
-        page.theme_mode = ft.ThemeMode.SYSTEM
-        page.bgcolor = ft.Colors.GREY_100
+        self.setup_gui()
+
+    def setup_gui(self):
+        """Erstellt die GUI-Komponenten."""
+        # Hauptfenster
+        self.root = ctk.CTk()
+        self.root.title("Moderner Taschenrechner")
+        self.root.geometry("260x340")
+        self.root.resizable(False, False)
+
+        # Helles Theme setzen
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
 
         # Display für Berechnungen
-        self.display = ft.Text(
-            value=self.display_value,
-            size=32,
-            weight=ft.FontWeight.BOLD,
-            text_align=ft.TextAlign.RIGHT,
-            color=ft.Colors.BLACK,
-            width=280,
-            height=60
-        )
+        self.display_frame = ctk.CTkFrame(self.root, width=240, height=60, corner_radius=10)
+        self.display_frame.pack(pady=10, padx=10)
+        self.display_frame.pack_propagate(False)
 
-        # Display-Container
-        display_container = ft.Container(
-            content=self.display,
-            padding=ft.padding.all(20),
-            bgcolor=ft.Colors.WHITE,
-            border_radius=ft.border_radius.all(10),
-            margin=ft.margin.all(10)
+        self.display_label = ctk.CTkLabel(
+            self.display_frame,
+            text=self.display_value,
+            font=("Arial", 24, "normal"),
+            text_color="black",
+            anchor="e"
         )
+        self.display_label.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Button-Definitionen
-        buttons = [
-            ["C", "±", "%", "÷"],
-            ["7", "8", "9", "×"],
-            ["4", "5", "6", "−"],
-            ["1", "2", "3", "+"],
-            ["0", ".", "="]
+        # Button-Frame
+        self.button_frame = ctk.CTkFrame(self.root, width=240, height=250)
+        self.button_frame.pack(pady=5, padx=10, fill="both", expand=True)
+        self.button_frame.pack_propagate(False)
+
+        # Buttons manuell erstellen für präzise Kontrolle
+        button_data = [
+            # Row 0
+            [("C", 0, 0), ("±", 0, 1), ("%", 0, 2), ("÷", 0, 3)],
+            # Row 1
+            [("7", 1, 0), ("8", 1, 1), ("9", 1, 2), ("×", 1, 3)],
+            # Row 2
+            [("4", 2, 0), ("5", 2, 1), ("6", 2, 2), ("−", 2, 3)],
+            # Row 3
+            [("1", 3, 0), ("2", 3, 1), ("3", 3, 2), ("+", 3, 3)],
+            # Row 4 - spezielle Behandlung
+            [(".", 4, 1), ("=", 4, 2)]
         ]
 
-        # Button-Rows erstellen
-        button_rows = []
-        for row in buttons:
-            button_row = []
-            for button_text in row:
-                if button_text == "0":
-                    # Zero-Button nimmt zwei Spalten ein
-                    btn = ft.ElevatedButton(
-                        text=button_text,
-                        width=140,
-                        height=60,
-                        on_click=lambda e, text=button_text: self.on_button_click(e, text),
-                        style=self.get_button_style(button_text)
-                    )
-                elif button_text == "=":
+        # Standard-Buttons erstellen
+        for row in button_data:
+            for button_text, row_pos, col_pos in row:
+                if button_text == "=":
                     # Equals-Button nimmt zwei Spalten ein
-                    btn = ft.ElevatedButton(
+                    btn = ctk.CTkButton(
+                        self.button_frame,
                         text=button_text,
-                        width=140,
-                        height=60,
-                        on_click=lambda e, text=button_text: self.on_button_click(e, text),
-                        style=self.get_button_style(button_text)
+                        height=40,
+                        corner_radius=20,
+                        font=("Arial", 18, "bold"),
+                        command=lambda text=button_text: self.handle_input(text),
+                        **self.get_button_style(button_text)
                     )
+                    btn.grid(row=row_pos, column=col_pos, columnspan=2, padx=2, pady=2, sticky="ew")
                 else:
-                    btn = ft.ElevatedButton(
+                    btn = ctk.CTkButton(
+                        self.button_frame,
                         text=button_text,
-                        width=60,
-                        height=60,
-                        on_click=lambda e, text=button_text: self.on_button_click(e, text),
-                        style=self.get_button_style(button_text)
+                        height=40,
+                        corner_radius=20,
+                        font=("Arial", 18, "bold"),
+                        command=lambda text=button_text: self.handle_input(text),
+                        **self.get_button_style(button_text)
                     )
-                button_row.append(btn)
-            button_rows.append(ft.Row(button_row, spacing=10, alignment=ft.MainAxisAlignment.CENTER))
+                    btn.grid(row=row_pos, column=col_pos, padx=2, pady=2, sticky="ew")
 
-        # Haupt-Layout
-        page.add(
-            ft.Column([
-                display_container,
-                ft.Container(
-                    content=ft.Column(button_rows, spacing=10),
-                    padding=ft.padding.all(10)
-                )
-            ], spacing=0, alignment=ft.MainAxisAlignment.START)
+        # Zero-Button separat erstellen (Row 4, Column 0, 2 Spalten breit)
+        zero_btn = ctk.CTkButton(
+            self.button_frame,
+            text="0",
+            height=40,
+            corner_radius=20,
+            font=("Arial", 18, "bold"),
+            command=lambda: self.handle_input("0"),
+            **self.get_button_style("0")
         )
+        zero_btn.grid(row=4, column=0, columnspan=2, padx=2, pady=2, sticky="ew")
 
-        # Tastatur-Event-Handler
-        page.on_keyboard_event = self.on_keyboard
-        page.update()
+        # Grid-Konfiguration für gleichmäßige Spalten
+        for i in range(4):
+            self.button_frame.grid_columnconfigure(i, weight=1)
 
-    def get_button_style(self, text: str) -> ft.ButtonStyle:
+        # Tastatur-Events binden
+        self.root.bind("<Key>", self.on_keyboard)
+        self.root.focus_set()
+
+    def get_button_style(self, text: str) -> dict:
         """Gibt den Button-Style basierend auf dem Button-Text zurück."""
         if text in ["÷", "×", "−", "+", "="]:
             # Operator-Buttons
-            return ft.ButtonStyle(
-                color=ft.Colors.WHITE,
-                bgcolor=ft.Colors.ORANGE,
-                shape=ft.RoundedRectangleBorder(radius=15)
-            )
+            return {
+                "fg_color": "#FF9500",
+                "text_color": "white",
+                "hover_color": "#E6840A"
+            }
         elif text in ["C", "±", "%"]:
             # Funktion-Buttons
-            return ft.ButtonStyle(
-                color=ft.Colors.BLACK,
-                bgcolor=ft.Colors.GREY_300,
-                shape=ft.RoundedRectangleBorder(radius=15)
-            )
+            return {
+                "fg_color": "#D4D4D2",
+                "text_color": "black",
+                "hover_color": "#BFBFBD"
+            }
         else:
             # Zahlen-Buttons
-            return ft.ButtonStyle(
-                color=ft.Colors.WHITE,
-                bgcolor=ft.Colors.GREY_700,
-                shape=ft.RoundedRectangleBorder(radius=15)
-            )
+            return {
+                "fg_color": "#505050",
+                "text_color": "white",
+                "hover_color": "#404040"
+            }
 
-    def on_button_click(self, e, text: str):
-        """Behandelt Button-Klicks."""
-        self.handle_input(text)
-
-    def on_keyboard(self, e: ft.KeyboardEvent):
+    def on_keyboard(self, event):
         """Behandelt Tastatureingaben."""
-        if e.key == "Escape":
+        key = event.keysym
+
+        if key == "Escape":
             self.handle_input("C")
-        elif e.key == "Enter":
+        elif key == "Return":
             self.handle_input("=")
-        elif e.key == "Backspace":
+        elif key == "BackSpace":
             self.handle_backspace()
-        elif e.key in "0123456789":
-            self.handle_input(e.key)
-        elif e.key == ".":
+        elif key in "0123456789":
+            self.handle_input(key)
+        elif key == "period":
             self.handle_input(".")
-        elif e.key == "+":
+        elif key == "plus":
             self.handle_input("+")
-        elif e.key == "-":
+        elif key == "minus":
             self.handle_input("−")
-        elif e.key == "*":
+        elif key == "asterisk":
             self.handle_input("×")
-        elif e.key == "/":
+        elif key == "slash":
             self.handle_input("÷")
 
     def handle_input(self, value: str):
@@ -185,64 +192,131 @@ class Calculator:
 
     def handle_number(self, number: str):
         """Behandelt Zahleneingaben."""
-        if self.reset_display:
-            self.display_value = number
+        if self.show_operation:
+            # Nach einem Operator: Neue Zahl zur Historie hinzufügen
+            self.calculation_history += f" {number}"
+            self.current_number = number
+            self.show_operation = False
+        elif self.reset_display:
+            # Nach Equals: Neue Berechnung starten
+            self.calculation_history = number
+            self.current_number = number
             self.reset_display = False
+        elif self.display_value == "0":
+            # Erste Eingabe oder nach Clear
+            self.current_number = number
+            self.calculation_history = number
         else:
-            if self.display_value == "0":
-                self.display_value = number
+            # Erweitere aktuelle Zahl
+            self.current_number += number
+            # Aktualisiere die letzte Zahl in der Historie
+            if self.calculation_history:
+                parts = self.calculation_history.split()
+                if parts:
+                    parts[-1] = self.current_number
+                    self.calculation_history = " ".join(parts)
             else:
-                self.display_value += number
+                self.calculation_history = self.current_number
+
+        # Display zeigt IMMER die komplette Historie
+        self.display_value = self.calculation_history
 
     def handle_decimal(self):
         """Behandelt Dezimalpunkt-Eingabe."""
         if self.reset_display:
-            self.display_value = "0."
+            self.current_number = "0."
+            self.calculation_history = "0."
             self.reset_display = False
-        elif "." not in self.display_value:
-            self.display_value += "."
+        elif "." not in self.current_number:
+            self.current_number += "."
+            # Aktualisiere die letzte Zahl in der Historie
+            if self.calculation_history:
+                parts = self.calculation_history.split()
+                if parts:
+                    parts[-1] = self.current_number
+                    self.calculation_history = " ".join(parts)
+            else:
+                self.calculation_history = self.current_number
+
+        # Display zeigt IMMER die komplette Historie
+        self.display_value = self.calculation_history
 
     def handle_operation(self, op: str):
         """Behandelt Operator-Eingaben."""
-        if self.operation and not self.reset_display:
-            self.handle_equals()
+        if not self.calculation_history:
+            # Erste Operation: Starte mit aktueller Zahl
+            self.calculation_history = f"{self.current_number} {op}"
+        else:
+            # Weitere Operationen: Hänge einfach an
+            self.calculation_history += f" {op}"
 
-        self.previous_number = self.display_value
         self.operation = op
-        self.reset_display = True
+        self.show_operation = True
+
+        # Display zeigt IMMER die komplette Historie
+        self.display_value = self.calculation_history
 
     def handle_equals(self):
         """Behandelt Gleichheits-Operation."""
-        if self.operation and self.previous_number:
+        if self.calculation_history:
             try:
-                current = float(self.display_value)
-                previous = float(self.previous_number)
+                # Parsen und berechnen der gesamten Kette
+                parts = self.calculation_history.split()
+                if len(parts) < 3:  # Mindestens "Zahl Operator Zahl"
+                    return
 
-                if self.operation == "÷" and current == 0:
-                    self.display_value = "Fehler"
+                # Erste Zahl als Startpunkt
+                result = float(parts[0])
+
+                # Durchlaufe alle Operationen in der Reihenfolge
+                i = 1
+                while i < len(parts) - 1:
+                    operator_str = parts[i]
+                    next_number = float(parts[i + 1])
+
+                    # Division durch Null prüfen
+                    if operator_str == "÷" and next_number == 0:
+                        self.display_value = "Fehler"
+                        self.calculation_history = ""
+                        self.reset_display = True
+                        self.show_operation = False
+                        return
+
+                    # Operation ausführen
+                    result = self.operations[operator_str](result, next_number)
+                    i += 2
+
+                # Formatiere Ergebnis
+                if result.is_integer():
+                    result_str = str(int(result))
                 else:
-                    result = self.operations[self.operation](previous, current)
-                    # Formatiere Ergebnis
-                    if result.is_integer():
-                        self.display_value = str(int(result))
-                    else:
-                        self.display_value = f"{result:.10g}"  # Entferne unnötige Nullen
+                    result_str = f"{result:.10g}"
 
+                # Zeige vollständige Berechnung mit Ergebnis
+                self.display_value = f"{self.calculation_history} = {result_str}"
+
+                # Für nächste Berechnung: Ergebnis als Startwert
+                self.calculation_history = result_str
                 self.operation = None
                 self.previous_number = ""
                 self.reset_display = True
+                self.show_operation = False
 
             except (ValueError, ZeroDivisionError, OverflowError):
                 self.display_value = "Fehler"
+                self.calculation_history = ""
                 self.reset_display = True
+                self.show_operation = False
 
     def handle_clear(self):
         """Behandelt Clear-Operation."""
         self.display_value = "0"
-        self.current_number = ""
+        self.current_number = "0"
         self.previous_number = ""
         self.operation = None
         self.reset_display = False
+        self.show_operation = False
+        self.calculation_history = ""
 
     def handle_plus_minus(self):
         """Behandelt Vorzeichenwechsel."""
@@ -251,6 +325,7 @@ class Calculator:
                 self.display_value = self.display_value[1:]
             else:
                 self.display_value = "-" + self.display_value
+        self.update_display()
 
     def handle_percent(self):
         """Behandelt Prozent-Operation."""
@@ -276,23 +351,38 @@ class Calculator:
 
     def update_display(self):
         """Aktualisiert das Display."""
-        # Begrenze Display-Länge
-        if len(self.display_value) > 12:
-            try:
-                # Versuche wissenschaftliche Notation
-                value = float(self.display_value)
-                self.display_value = f"{value:.5e}"
-            except ValueError:
-                self.display_value = self.display_value[:12]
+        # Intelligente Display-Längen-Begrenzung
+        if len(self.display_value) > 20:
+            # Bei langen Berechnungs-Strings: Zeige die letzten Teile
+            if " " in self.display_value:
+                parts = self.display_value.split()
+                # Zeige so viele Teile von rechts wie möglich
+                display_parts = []
+                current_length = 0
+                for part in reversed(parts):
+                    if current_length + len(part) + 1 <= 20:
+                        display_parts.insert(0, part)
+                        current_length += len(part) + 1
+                    else:
+                        break
+                if len(display_parts) < len(parts):
+                    self.display_value = "..." + " ".join(display_parts)
+                else:
+                    self.display_value = " ".join(display_parts)
+            else:
+                self.display_value = self.display_value[-20:]
 
-        self.display.value = self.display_value
-        self.display.update()
+        self.display_label.configure(text=self.display_value)
+
+    def run(self):
+        """Startet die GUI-Hauptschleife."""
+        self.root.mainloop()
 
 
 def main():
     """Startet die Taschenrechner-App."""
     calculator = Calculator()
-    ft.app(target=calculator.main)
+    calculator.run()
 
 
 if __name__ == "__main__":
