@@ -88,7 +88,7 @@ class Calculator:
                         height=40,
                         corner_radius=20,
                         font=("Arial", 18, "bold"),
-                        command=lambda text=button_text: self.handle_input(text),
+                        command=lambda t=button_text: self.handle_input(t),
                         **self.get_button_style(button_text)
                     )
                     btn.grid(row=row_pos, column=col_pos, columnspan=2, padx=2, pady=2, sticky="ew")
@@ -99,7 +99,7 @@ class Calculator:
                         height=40,
                         corner_radius=20,
                         font=("Arial", 18, "bold"),
-                        command=lambda text=button_text: self.handle_input(text),
+                        command=lambda t=button_text: self.handle_input(t),
                         **self.get_button_style(button_text)
                     )
                     btn.grid(row=row_pos, column=col_pos, padx=2, pady=2, sticky="ew")
@@ -320,34 +320,71 @@ class Calculator:
 
     def handle_plus_minus(self):
         """Behandelt Vorzeichenwechsel."""
-        if self.display_value != "0" and not self.display_value.startswith("Fehler"):
-            if self.display_value.startswith("-"):
-                self.display_value = self.display_value[1:]
+        if self.current_number != "0" and not self.display_value.startswith("Fehler"):
+            if self.current_number.startswith("-"):
+                self.current_number = self.current_number[1:]
             else:
-                self.display_value = "-" + self.display_value
-        self.update_display()
+                self.current_number = "-" + self.current_number
+
+            # Aktualisiere calculation_history
+            if self.calculation_history:
+                parts = self.calculation_history.split()
+                if parts:
+                    parts[-1] = self.current_number
+                    self.calculation_history = " ".join(parts)
+            else:
+                self.calculation_history = self.current_number
+
+            self.display_value = self.calculation_history
 
     def handle_percent(self):
         """Behandelt Prozent-Operation."""
         try:
-            value = float(self.display_value)
+            value = float(self.current_number)
             result = value / 100
             if result.is_integer():
-                self.display_value = str(int(result))
+                result_str = str(int(result))
             else:
-                self.display_value = f"{result:.10g}"
+                result_str = f"{result:.10g}"
+
+            self.current_number = result_str
+
+            # Aktualisiere calculation_history
+            if self.calculation_history:
+                parts = self.calculation_history.split()
+                if parts:
+                    parts[-1] = self.current_number
+                    self.calculation_history = " ".join(parts)
+            else:
+                self.calculation_history = self.current_number
+
+            self.display_value = self.calculation_history
             self.reset_display = True
         except ValueError:
             self.display_value = "Fehler"
+            self.calculation_history = ""
             self.reset_display = True
 
     def handle_backspace(self):
         """Behandelt Backspace-Taste."""
-        if len(self.display_value) > 1 and not self.display_value.startswith("Fehler"):
-            self.display_value = self.display_value[:-1]
+        if self.display_value.startswith("Fehler"):
+            return
+
+        if len(self.current_number) > 1:
+            self.current_number = self.current_number[:-1]
         else:
-            self.display_value = "0"
-        self.update_display()
+            self.current_number = "0"
+
+        # Aktualisiere calculation_history
+        if self.calculation_history:
+            parts = self.calculation_history.split()
+            if parts:
+                parts[-1] = self.current_number
+                self.calculation_history = " ".join(parts)
+        else:
+            self.calculation_history = self.current_number
+
+        self.display_value = self.calculation_history
 
     def update_display(self):
         """Aktualisiert das Display."""
