@@ -92,6 +92,8 @@
             left: 0;
             top: 0;
             will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .slot-item {
@@ -292,15 +294,83 @@
             transform: none;
         }
 
-        .coins {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.2em;
-            color: #ffd700;
+        .coin-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .coin-slot-unit {
+            width: 50px;
+            height: 35px;
+            background: linear-gradient(180deg, #888, #555);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .coin-slot-slit {
+            width: 28px;
+            height: 4px;
+            background: #111;
+            border-radius: 2px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.9);
+        }
+
+        .coin {
+            width: 38px;
+            height: 38px;
+            background: radial-gradient(circle at 35% 35%, #ffe44d, #daa520, #b8860b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
             font-weight: bold;
-            text-shadow: 0 0 10px #ffd700;
+            color: #7a5c00;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset -2px -2px 4px rgba(0,0,0,0.25), inset 2px 2px 4px rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: transform 0.15s;
+            animation: coinPulse 2s ease-in-out infinite;
+            border: 2px solid #c49000;
+            user-select: none;
+        }
+
+        .coin:hover {
+            transform: scale(1.15);
+            animation: none;
+            box-shadow: 0 4px 12px rgba(255,215,0,0.6), inset -2px -2px 4px rgba(0,0,0,0.25), inset 2px 2px 4px rgba(255,255,255,0.4);
+        }
+
+        .coin.hidden {
+            visibility: hidden;
+            animation: none;
+        }
+
+        .coin.inserting {
+            animation: insertCoin 0.35s ease-in forwards;
+        }
+
+        .coin-text {
+            color: #ffd700;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(255,215,0,0.5);
+        }
+
+        @keyframes coinPulse {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-4px) scale(1.05); }
+        }
+
+        @keyframes insertCoin {
+            0% { transform: translateX(0) scale(1); opacity: 1; }
+            70% { transform: translateX(-20px) scale(0.6); opacity: 0.5; }
+            100% { transform: translateX(-25px) scale(0.3); opacity: 0; }
         }
 
         .info-text {
@@ -353,6 +423,10 @@
             .lever { width: 20px; height: 120px; }
             .lever-ball { width: 40px; height: 40px; }
             .result-text { font-size: 1.2em; }
+            .coin { width: 30px; height: 30px; font-size: 14px; }
+            .coin-slot-unit { width: 38px; height: 28px; }
+            .coin-slot-slit { width: 22px; }
+            .coin-text { font-size: 0.7em; }
         }
     </style>
 </head>
@@ -389,19 +463,25 @@
             </div>
 
             <div class="lever-container">
-                <div class="lever" id="lever">
+                <div class="lever disabled" id="lever">
                     <div class="lever-ball"></div>
                 </div>
             </div>
 
-            <div class="coins">Viel Glueck!</div>
+            <div class="coin-area">
+                <div class="coin" id="coin" title="Münze einwerfen">€</div>
+                <div class="coin-slot-unit">
+                    <div class="coin-slot-slit"></div>
+                </div>
+                <span class="coin-text" id="coinText">Münze einwerfen!</span>
+            </div>
         </div>
 
         <div class="result-display" id="resultDisplay">
             <div class="result-text" id="result">Ziehen Sie am Hebel!</div>
         </div>
 
-        <button class="button" id="spinButton">Namen Ziehen!</button>
+        <button class="button" id="spinButton" disabled>Namen Ziehen!</button>
 
         <p class="info-text rule">
             JACKPOT = Alle 3 gleich!
@@ -429,6 +509,7 @@
         var hamsterNames = [];
         var audioContext = null;
         var spinning = false;
+        var coinInserted = false;
 
         function loadNames() {
             return fetch('hamster_names.json')
@@ -443,6 +524,8 @@
                     hamsterNames = ['Error'];
                     document.getElementById('spinButton').disabled = true;
                     document.getElementById('lever').classList.add('disabled');
+                    document.getElementById('coin').classList.add('hidden');
+                    document.getElementById('coinText').textContent = '';
                     document.getElementById('result').textContent =
                         'Fehler: hamster_names.json konnte nicht geladen werden!';
                 });
@@ -497,7 +580,7 @@
                     names.push(pickRandom(hamsterNames));
                 }
                 renderReel(el, names);
-                el.style.transform = 'translateY(0px)';
+                el.style.transform = 'translate3d(0,0px,0)';
             });
         }
 
@@ -507,7 +590,8 @@
                 var strip = buildReelStrip(finalName);
                 renderReel(reel, strip);
 
-                var stripHeight = REEL_ITEM_COUNT * ITEM_HEIGHT;
+                var itemH = reel.querySelector('.slot-item').offsetHeight || ITEM_HEIGHT;
+                var stripHeight = REEL_ITEM_COUNT * itemH;
 
                 var constTime = totalTime - ACCEL_TIME - DECEL_TIME - BOUNCE_TIME;
                 if (constTime < 300) constTime = 300;
@@ -559,20 +643,27 @@
                         reel.style.opacity = '1';
 
                     } else {
-                        reel.style.transform = 'translateY(0px)';
+                        reel.style.transform = 'translate3d(0,0px,0)';
                         reel.style.opacity = '1';
                         playStopSound();
                         resolve(finalName);
                         return;
                     }
 
-                    var offset = position % stripHeight;
-                    reel.style.transform = 'translateY(' + (-offset) + 'px)';
+                    var offset = Math.round(position % stripHeight);
+                    if (offset >= stripHeight) offset = 0;
+                    reel.style.transform = 'translate3d(0,' + (-offset) + 'px,0)';
 
-                    var curIdx = Math.floor(offset / ITEM_HEIGHT);
+                    var curIdx = Math.floor(offset / itemH);
                     if (curIdx !== lastTickIdx) {
                         lastTickIdx = curIdx;
-                        if (phase === 'decel') playTickSound();
+                        if (phase === 'accel') {
+                            playTickSound(0.015);
+                        } else if (phase === 'constant') {
+                            playTickSound(0.01);
+                        } else if (phase === 'decel') {
+                            playTickSound(0.04);
+                        }
                     }
 
                     requestAnimationFrame(tick);
@@ -602,8 +693,28 @@
             osc.stop(audioContext.currentTime + dur);
         }
 
-        function playTickSound() {
-            playSound(800, 0.03, 'square', 0.03);
+        function playTickSound(vol) {
+            var freq = 700 + Math.random() * 200;
+            playSound(freq, 0.025, 'square', vol || 0.03);
+        }
+
+        function playLeverSound() {
+            playSound(80, 0.12, 'square', 0.15);
+            setTimeout(function() { playSound(150, 0.06, 'sawtooth', 0.1); }, 40);
+            setTimeout(function() { playSound(60, 0.18, 'triangle', 0.06); }, 90);
+        }
+
+        function playCoinInsertSound() {
+            playSound(1800, 0.06, 'sine', 0.1);
+            setTimeout(function() { playSound(2500, 0.04, 'sine', 0.08); }, 30);
+            setTimeout(function() { playSound(1200, 0.08, 'sine', 0.06); }, 70);
+            setTimeout(function() { playSound(600, 0.12, 'triangle', 0.04); }, 120);
+        }
+
+        function playCoinSound() {
+            var freq = 2500 + Math.random() * 2000;
+            playSound(freq, 0.06, 'sine', 0.07);
+            setTimeout(function() { playSound(freq * 0.7, 0.04, 'sine', 0.04); }, 40);
         }
 
         function playStopSound() {
@@ -612,9 +723,15 @@
         }
 
         function playJackpotSound() {
-            [523, 659, 784, 1047, 1319].forEach(function(note, i) {
-                setTimeout(function() { playSound(note, 0.4, 'sine', 0.15); }, i * 150);
+            var bells = [2400, 1800, 2400, 1800, 2400, 3200];
+            bells.forEach(function(freq, i) {
+                setTimeout(function() { playSound(freq, 0.35, 'sine', 0.12); }, i * 150);
             });
+            for (var i = 0; i < 20; i++) {
+                (function(idx) {
+                    setTimeout(function() { playCoinSound(); }, 500 + idx * 80);
+                })(i);
+            }
         }
 
         function playNoWinSound() {
@@ -623,7 +740,8 @@
         }
 
         function spin() {
-            if (spinning) return;
+            if (spinning || !coinInserted) return;
+            coinInserted = false;
             initAudio();
             spinning = true;
 
@@ -657,7 +775,7 @@
                 }
             }
 
-            playSound(150, 0.5, 'square', 0.05);
+            playLeverSound();
 
             Promise.all([
                 spinReel('reel1', REEL_DURATIONS[0], names[0]),
@@ -670,8 +788,9 @@
                     showResult(results);
                 }
                 spinning = false;
-                btn.disabled = false;
-                lever.classList.remove('disabled');
+                document.getElementById('coin').classList.remove('hidden');
+                document.getElementById('coin').classList.remove('inserting');
+                document.getElementById('coinText').textContent = 'Nochmal? Münze einwerfen!';
             });
         }
 
@@ -713,6 +832,24 @@
             }
         }
 
+        function insertCoin() {
+            if (spinning || coinInserted || hamsterNames[0] === 'Error') return;
+            initAudio();
+            coinInserted = true;
+            var coin = document.getElementById('coin');
+            coin.classList.add('inserting');
+            playCoinInsertSound();
+            setTimeout(function() {
+                coin.classList.add('hidden');
+                coin.classList.remove('inserting');
+                document.getElementById('coinText').textContent = 'Viel Gl\u00FCck!';
+                document.getElementById('spinButton').disabled = false;
+                document.getElementById('lever').classList.remove('disabled');
+                document.getElementById('result').textContent = 'Ziehen Sie am Hebel!';
+            }, 350);
+        }
+
+        document.getElementById('coin').addEventListener('click', insertCoin);
         document.getElementById('spinButton').addEventListener('click', spin);
         document.getElementById('lever').addEventListener('click', function(e) {
             if (!e.target.closest('.lever').classList.contains('disabled')) {
@@ -721,7 +858,10 @@
         });
 
         window.addEventListener('load', function() {
-            loadNames().then(initializeReels);
+            loadNames().then(function() {
+                initializeReels();
+                document.getElementById('result').textContent = 'M\u00FCnze einwerfen zum Spielen!';
+            });
         });
     </script>
 </body>
