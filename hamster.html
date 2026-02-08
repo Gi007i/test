@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamster-Namengenerator - Einarmiger Bandit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial Black', 'Arial Bold', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 650px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 3px 3px 6px rgba(0,0,0,0.3), 0 0 20px #fff; }
+            to { text-shadow: 3px 3px 6px rgba(0,0,0,0.3), 0 0 30px #fff, 0 0 40px #ffeb3b; }
+        }
+
+        .slot-machine {
+            background: linear-gradient(145deg, #d32f2f, #c62828);
+            border: 8px solid #ffd700;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,215,0,0.3);
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .slot-machine::before {
+            content: '\2605  JACKPOT  \2605';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-size: 1.2em;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        .slots-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 40px 0 30px 0;
+        }
+
+        .slot {
+            background: linear-gradient(180deg, #1a1a1a, #000);
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            width: 160px;
+            height: 180px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .slot-window {
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-reel {
+            position: absolute;
+            width: 100%;
+            left: 0;
+            top: 0;
+            will-change: transform;
+        }
+
+        .slot-item {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.05em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            padding: 0 8px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .slot-item:nth-child(odd) {
+            background: linear-gradient(180deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
+        }
+
+        .slot-shadow-top,
+        .slot-shadow-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .slot-shadow-top {
+            top: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+        }
+
+        .slot-shadow-bottom {
+            bottom: 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+        }
+
+        .winning-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 60px;
+            transform: translateY(-50%);
+            border-top: 3px solid rgba(255, 215, 0, 0.5);
+            border-bottom: 3px solid rgba(255, 215, 0, 0.5);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .winning-line.jackpot {
+            animation: winningGlow 0.5s ease-in-out infinite;
+        }
+
+        @keyframes winningGlow {
+            0%, 100% {
+                border-color: rgba(255, 215, 0, 0.8);
+                box-shadow: 0 0 20px #ffd700;
+            }
+            50% {
+                border-color: rgba(255, 215, 0, 1);
+                box-shadow: 0 0 40px #ffd700;
+            }
+        }
+
+        .lever-container {
+            position: absolute;
+            right: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .lever {
+            width: 30px;
+            height: 150px;
+            background: linear-gradient(90deg, #c0c0c0, #808080);
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .lever:hover:not(.disabled) {
+            transform: scale(1.05);
+        }
+
+        .lever.pulled {
+            animation: pull 0.5s ease-out;
+        }
+
+        .lever.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        @keyframes pull {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(25deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .lever-ball {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle at 30% 30%, #ff0000, #cc0000);
+            border-radius: 50%;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset -5px -5px 10px rgba(0,0,0,0.3);
+        }
+
+        .lever-ball::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            width: 15px;
+            height: 15px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+        }
+
+        .result-display {
+            background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+            border: 4px solid #ffd700;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .result-display.jackpot {
+            animation: jackpotPulse 0.5s ease-in-out infinite;
+            background: linear-gradient(145deg, #ffd700, #ffed4e);
+        }
+
+        @keyframes jackpotPulse {
+            0%, 100% { transform: scale(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 30px #ffd700; }
+            50% { transform: scale(1.05); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 50px #ffd700; }
+        }
+
+        .result-text {
+            color: #ffd700;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ffd700, 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .result-display.jackpot .result-text {
+            color: #c62828;
+            font-size: 2em;
+            text-shadow: 0 0 10px #fff, 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .button {
+            background: linear-gradient(145deg, #4caf50, #45a049);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.4);
+        }
+
+        .button:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        .button:disabled {
+            background: linear-gradient(145deg, #999, #777);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .coins {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2em;
+            color: #ffd700;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        .info-text {
+            color: #fff;
+            margin-top: 20px;
+            font-size: 0.9em;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .info-text.rule {
+            font-size: 1.1em;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        .winner-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ffd700;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { opacity: 1; }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .slot-machine { padding: 30px 20px; }
+            .slot { width: 105px; height: 150px; }
+            .slot-item { font-size: 0.8em; height: 50px; }
+            .winning-line { height: 50px; }
+            .lever-container { right: -40px; }
+            .lever { width: 20px; height: 120px; }
+            .lever-ball { width: 40px; height: 40px; }
+            .result-text { font-size: 1.2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hamster-Namengenerator</h1>
+
+        <div class="slot-machine">
+            <div class="slots-container">
+                <div class="slot">
+                    <div class="winning-line" id="winLine1"></div>
+                    <div class="slot-window">
+                        <div class="slot-reel" id="reel1"></div>
+                        <div class="slot-shadow-top"></div>
+                        <div class="slot-shadow-bottom"></div>
+                    </div>
+                </div>
+                <div class="slot">
+                    <div class="winning-line" id="winLine2"></div>
+                    <div class="slot-window">
+                        <div class="slot-reel" id="reel2"></div>
+                        <div class="slot-shadow-top"></div>
+                        <div class="slot-shadow-bottom"></div>
+                    </div>
+                </div>
+                <div class="slot">
+                    <div class="winning-line" id="winLine3"></div>
+                    <div class="slot-window">
+                        <div class="slot-reel" id="reel3"></div>
+                        <div class="slot-shadow-top"></div>
+                        <div class="slot-shadow-bottom"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lever-container">
+                <div class="lever" id="lever">
+                    <div class="lever-ball"></div>
+                </div>
+            </div>
+
+            <div class="coins">Viel Glueck!</div>
+        </div>
+
+        <div class="result-display" id="resultDisplay">
+            <div class="result-text" id="result">Ziehen Sie am Hebel!</div>
+        </div>
+
+        <button class="button" id="spinButton">Namen Ziehen!</button>
+
+        <p class="info-text rule">
+            JACKPOT = Alle 3 gleich!
+        </p>
+        <p class="info-text">
+            Klicken Sie auf den Hebel oder den Button, um zu spielen!
+        </p>
+    </div>
+
+    <div class="winner-animation" id="winnerAnimation"></div>
+
+    <script>
+        var ITEM_HEIGHT = 60;
+        var REEL_ITEM_COUNT = 40;
+        var VISIBLE_ITEMS = 3;
+        var CENTER_INDEX = 1;
+        var MAX_SPEED = 2800;
+        var ACCEL_TIME = 600;
+        var DECEL_TIME = 1800;
+        var BOUNCE_TIME = 350;
+        var OVERSHOOT_PX = 14;
+        var REEL_DURATIONS = [3500, 5500, 7500];
+        var JACKPOT_CHANCE = 0.1;
+
+        var hamsterNames = [];
+        var audioContext = null;
+        var spinning = false;
+
+        function loadNames() {
+            return fetch('hamster_names.json')
+                .then(function(r) {
+                    if (!r.ok) throw new Error('not found');
+                    return r.json();
+                })
+                .then(function(data) {
+                    hamsterNames = data.names;
+                })
+                .catch(function() {
+                    hamsterNames = [
+                        "Fl\u00f6ckchen","Kr\u00fcmel","Nussbert","Fips","Wusel","Knabberich","Moppelchen","Puschel","Knirps","Schnuffi",
+                        "Luna","Nala","Lilly","Mimi","Bella","Daisy","Cookie","Lotte","Resi","Amicelli",
+                        "Max","Leo","Bruno","Theo","Fridolin","Rocky","Elvis","Obelix","Speedy","Bilbo",
+                        "Professor Kr\u00fcmel","Sir Nagerlot","Hamzilla","Flitzpiepe","Sir Fuzzy","Winston Whiskers","Hammy McHamsterface",
+                        "Marshmallow","Peanut","Muffin","Cupcake","Honey","Toffee","Cinnamon","Biscuit","Popcorn",
+                        "Cheerio","Pumpkin","Pepper","Chili","Creamy","Wuschel","Zottel","Flecki",
+                        "Nibbles","Gizmo","Whiskers","Fuzzy","Squeaky","Patches","Buttons","Snickers","Twix",
+                        "Oreo","Brownie","Mocha","Caramel","Cappuccino","Espresso","Latte","Cocoa","Truffle",
+                        "Hammy Potter","Chewbacca","Yoda","Gandalf","Frodo","Pippin","Merry","Samwise","Legolas",
+                        "Valiant","Zephyr","Quixote","Galileo","Leonardo","Maximus","Amigo","Amore",
+                        "Flauschi","Knuddel","Schnucki","S\u00fc\u00dfling","Zuckerschnute","Herzchen","Liebling","Sch\u00e4tzchen",
+                        "Chip","Dale","Stuart","Jerry","Remy","Splinter","Speedy Gonzales","Mickey",
+                        "Nugget","Tofu","Sushi","Mochi","Wasabi","Ginger","Sesam","Quinoa",
+                        "Pixel","Nano","Mikro","Mini","Winzig","Zwerg","L\u00fctt","Kurz",
+                        "Socke","Knopf","Kuller","Purzel","Kullerkeks","Pummelchen","Dickerchen","Wonneproppen",
+                        "Turbo","Blitz","Sprint","Racer","Flash","Zoom","D\u00fcse","Sause",
+                        "Schlafm\u00fctze","Tr\u00e4umer","Penner","D\u00f6ser","Kuschel","Schnarch","G\u00e4hn",
+                        "Nussknacker","Hamsterb\u00e4ckchen","Backentasche","Knabbi","Nager","M\u00fcmmler","Mampf",
+                        "Sherlock","Watson","Einstein","Newton","Tesla","Edison","Darwin",
+                        "Schoko","Nougat","Vanille","Erdbeer","Banane","Kirsch","Apfel",
+                        "Kiwi","Mango","Papaya","Ananas","Melone","Beere","Pflaume",
+                        "Zeus","Apollo","Athena","Hera","Poseidon","Hermes","Artemis",
+                        "Thor","Loki","Odin","Freya","Baldur","Heimdall","Frigg",
+                        "Romeo","Julia","Hamlet","Ophelia","Othello","Desdemona","Macbeth",
+                        "Mozart","Beethoven","Bach","Chopin","Vivaldi","Wagner","Verdi",
+                        "Picasso","Monet","Van Gogh","Rembrandt","Michelangelo","Raphael","Botticelli",
+                        "Shakespeare","Goethe","Schiller","Kafka","Hemingway","Tolkien","Rowling",
+                        "Pikachu","Squirtle","Charmander","Bulbasaur","Eevee","Jigglypuff","Snorlax",
+                        "Mario","Luigi","Peach","Yoshi","Bowser","Toad","Wario",
+                        "Sonic","Tails","Knuckles","Shadow","Amy","Rouge","Silver",
+                        "Link","Zelda","Ganondorf","Navi","Epona","Sheik","Midna",
+                        "Kirby","Dedede","Meta Knight","Waddle Dee","Star","Dream"
+                    ];
+                });
+        }
+
+        function shuffleArray(arr) {
+            var copy = arr.slice();
+            for (var i = copy.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var tmp = copy[i];
+                copy[i] = copy[j];
+                copy[j] = tmp;
+            }
+            return copy;
+        }
+
+        function pickRandom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+
+        function buildReelStrip(targetName) {
+            var strip = [];
+            var pool = shuffleArray(hamsterNames);
+            var idx = 0;
+            for (var i = 0; i < REEL_ITEM_COUNT; i++) {
+                while (pool[idx] === targetName) {
+                    idx = (idx + 1) % pool.length;
+                }
+                strip.push(pool[idx]);
+                idx = (idx + 1) % pool.length;
+            }
+            strip[CENTER_INDEX] = targetName;
+            return strip;
+        }
+
+        function renderReel(el, names) {
+            el.innerHTML = '';
+            var doubled = names.concat(names);
+            for (var i = 0; i < doubled.length; i++) {
+                var item = document.createElement('div');
+                item.className = 'slot-item';
+                item.textContent = doubled[i];
+                el.appendChild(item);
+            }
+        }
+
+        function initializeReels() {
+            ['reel1', 'reel2', 'reel3'].forEach(function(id) {
+                var el = document.getElementById(id);
+                var names = [];
+                for (var i = 0; i < REEL_ITEM_COUNT; i++) {
+                    names.push(pickRandom(hamsterNames));
+                }
+                renderReel(el, names);
+                el.style.transform = 'translateY(0px)';
+            });
+        }
+
+        function spinReel(reelId, totalTime, finalName) {
+            return new Promise(function(resolve) {
+                var reel = document.getElementById(reelId);
+                var strip = buildReelStrip(finalName);
+                renderReel(reel, strip);
+
+                var stripHeight = REEL_ITEM_COUNT * ITEM_HEIGHT;
+
+                var constTime = totalTime - ACCEL_TIME - DECEL_TIME - BOUNCE_TIME;
+                if (constTime < 300) constTime = 300;
+
+                var accelDist = 0.5 * MAX_SPEED * (ACCEL_TIME / 1000);
+                var constDist = MAX_SPEED * (constTime / 1000);
+                var decelDist = 0.5 * MAX_SPEED * (DECEL_TIME / 1000);
+                var rawDist = accelDist + constDist + decelDist;
+
+                var fullRotations = Math.ceil(rawDist / stripHeight);
+                if (fullRotations < 3) fullRotations = 3;
+                var targetDist = fullRotations * stripHeight;
+
+                var adjConstDist = targetDist - accelDist - decelDist;
+                var adjConstTime = (adjConstDist / MAX_SPEED) * 1000;
+                var adjTotalTime = ACCEL_TIME + adjConstTime + DECEL_TIME;
+
+                var startTime = null;
+                var lastTickIdx = -1;
+
+                function tick(ts) {
+                    if (!startTime) startTime = ts;
+                    var elapsed = ts - startTime;
+                    var position, phase;
+
+                    if (elapsed < ACCEL_TIME) {
+                        phase = 'accel';
+                        var t = elapsed / ACCEL_TIME;
+                        position = accelDist * t * t;
+                        reel.style.opacity = String(1 - t * 0.35);
+
+                    } else if (elapsed < ACCEL_TIME + adjConstTime) {
+                        phase = 'constant';
+                        var t = (elapsed - ACCEL_TIME) / adjConstTime;
+                        position = accelDist + adjConstDist * t;
+                        reel.style.opacity = '0.6';
+
+                    } else if (elapsed < adjTotalTime) {
+                        phase = 'decel';
+                        var t = (elapsed - ACCEL_TIME - adjConstTime) / DECEL_TIME;
+                        var eased = 1 - Math.pow(1 - t, 3);
+                        position = accelDist + adjConstDist + decelDist * eased;
+                        reel.style.opacity = String(0.6 + eased * 0.4);
+
+                    } else if (elapsed < adjTotalTime + BOUNCE_TIME) {
+                        phase = 'bounce';
+                        var t = (elapsed - adjTotalTime) / BOUNCE_TIME;
+                        position = targetDist + OVERSHOOT_PX * Math.sin(t * Math.PI);
+                        reel.style.opacity = '1';
+
+                    } else {
+                        reel.style.transform = 'translateY(0px)';
+                        reel.style.opacity = '1';
+                        playStopSound();
+                        resolve(finalName);
+                        return;
+                    }
+
+                    var offset = position % stripHeight;
+                    reel.style.transform = 'translateY(' + (-offset) + 'px)';
+
+                    var curIdx = Math.floor(offset / ITEM_HEIGHT);
+                    if (curIdx !== lastTickIdx) {
+                        lastTickIdx = curIdx;
+                        if (phase === 'decel') playTickSound();
+                    }
+
+                    requestAnimationFrame(tick);
+                }
+
+                requestAnimationFrame(tick);
+            });
+        }
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(freq, dur, type, vol) {
+            if (!audioContext) return;
+            var osc = audioContext.createOscillator();
+            var gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.frequency.value = freq;
+            osc.type = type || 'sine';
+            gain.gain.setValueAtTime(vol || 0.1, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + dur);
+            osc.start(audioContext.currentTime);
+            osc.stop(audioContext.currentTime + dur);
+        }
+
+        function playTickSound() {
+            playSound(800, 0.03, 'square', 0.03);
+        }
+
+        function playStopSound() {
+            playSound(500, 0.15, 'sine', 0.12);
+            setTimeout(function() { playSound(700, 0.1, 'sine', 0.08); }, 80);
+        }
+
+        function playJackpotSound() {
+            [523, 659, 784, 1047, 1319].forEach(function(note, i) {
+                setTimeout(function() { playSound(note, 0.4, 'sine', 0.15); }, i * 150);
+            });
+        }
+
+        function playNoWinSound() {
+            playSound(250, 0.2, 'sawtooth', 0.08);
+            setTimeout(function() { playSound(200, 0.3, 'sawtooth', 0.06); }, 150);
+        }
+
+        function spin() {
+            if (spinning) return;
+            initAudio();
+            spinning = true;
+
+            var btn = document.getElementById('spinButton');
+            var lever = document.getElementById('lever');
+            var result = document.getElementById('result');
+            var display = document.getElementById('resultDisplay');
+
+            btn.disabled = true;
+            lever.classList.add('disabled');
+            result.textContent = 'Die Walzen drehen...';
+            display.classList.remove('jackpot');
+
+            ['winLine1', 'winLine2', 'winLine3'].forEach(function(id) {
+                document.getElementById(id).classList.remove('jackpot');
+            });
+
+            lever.classList.add('pulled');
+            setTimeout(function() { lever.classList.remove('pulled'); }, 500);
+
+            var isJackpot = Math.random() < JACKPOT_CHANCE;
+            var names;
+
+            if (isJackpot) {
+                var jName = pickRandom(hamsterNames);
+                names = [jName, jName, jName];
+            } else {
+                names = [pickRandom(hamsterNames), pickRandom(hamsterNames), pickRandom(hamsterNames)];
+                while (names[0] === names[1] && names[1] === names[2]) {
+                    names[2] = pickRandom(hamsterNames);
+                }
+            }
+
+            playSound(150, 0.5, 'square', 0.05);
+
+            Promise.all([
+                spinReel('reel1', REEL_DURATIONS[0], names[0]),
+                spinReel('reel2', REEL_DURATIONS[1], names[1]),
+                spinReel('reel3', REEL_DURATIONS[2], names[2])
+            ]).then(function(results) {
+                if (results[0] === results[1] && results[1] === results[2]) {
+                    showJackpot(results[0]);
+                } else {
+                    showResult(results);
+                }
+                spinning = false;
+                btn.disabled = false;
+                lever.classList.remove('disabled');
+            });
+        }
+
+        function showJackpot(name) {
+            document.getElementById('result').innerHTML = 'JACKPOT!<br><strong>' + name + '</strong>';
+            document.getElementById('resultDisplay').classList.add('jackpot');
+            ['winLine1', 'winLine2', 'winLine3'].forEach(function(id) {
+                document.getElementById(id).classList.add('jackpot');
+            });
+            playJackpotSound();
+            createConfetti();
+        }
+
+        function showResult(names) {
+            document.getElementById('result').innerHTML =
+                names[0] + ' - ' + names[1] + ' - ' + names[2] +
+                '<br><small>Kein Jackpot, aber tolle Namen! Nochmal?</small>';
+            playNoWinSound();
+        }
+
+        function createConfetti() {
+            var colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#5f27cd', '#ff9ff3'];
+            var container = document.getElementById('winnerAnimation');
+            for (var i = 0; i < 80; i++) {
+                (function(idx) {
+                    setTimeout(function() {
+                        var c = document.createElement('div');
+                        c.className = 'confetti';
+                        c.style.left = Math.random() * 100 + '%';
+                        c.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        c.style.width = (Math.random() * 10 + 5) + 'px';
+                        c.style.height = (Math.random() * 10 + 5) + 'px';
+                        c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                        c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                        container.appendChild(c);
+                        setTimeout(function() { c.remove(); }, 4000);
+                    }, idx * 25);
+                })(i);
+            }
+        }
+
+        document.getElementById('spinButton').addEventListener('click', spin);
+        document.getElementById('lever').addEventListener('click', function(e) {
+            if (!e.target.closest('.lever').classList.contains('disabled')) {
+                spin();
+            }
+        });
+
+        window.addEventListener('load', function() {
+            loadNames().then(initializeReels);
+        });
+    </script>
+</body>
+</html>
