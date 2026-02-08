@@ -484,7 +484,7 @@
         <button class="button" id="spinButton" disabled>Namen Ziehen!</button>
 
         <p class="info-text rule">
-            JACKPOT = Alle 3 gleich!
+            JACKPOT = Alle 3 gleich! | 2 gleich = Teilgewinn!
         </p>
         <p class="info-text">
             Klicken Sie auf den Hebel oder den Button, um zu spielen!
@@ -504,7 +504,8 @@
         var BOUNCE_TIME = 350;
         var OVERSHOOT_PX = 14;
         var REEL_DURATIONS = [3500, 5500, 7500];
-        var JACKPOT_CHANCE = 0.1;
+        var JACKPOT_CHANCE = 0.05;
+        var PARTIAL_MATCH_CHANCE = 0.25;
 
         var hamsterNames = [];
         var audioContext = null;
@@ -734,6 +735,12 @@
             }
         }
 
+        function playPartialWinSound() {
+            playSound(800, 0.15, 'sine', 0.1);
+            setTimeout(function() { playSound(1000, 0.15, 'sine', 0.1); }, 120);
+            setTimeout(function() { playSound(1200, 0.2, 'sine', 0.08); }, 240);
+        }
+
         function playNoWinSound() {
             playSound(250, 0.2, 'sawtooth', 0.08);
             setTimeout(function() { playSound(200, 0.3, 'sawtooth', 0.06); }, 150);
@@ -762,16 +769,30 @@
             lever.classList.add('pulled');
             setTimeout(function() { lever.classList.remove('pulled'); }, 500);
 
-            var isJackpot = Math.random() < JACKPOT_CHANCE;
+            var roll = Math.random();
             var names;
 
-            if (isJackpot) {
+            if (roll < JACKPOT_CHANCE) {
                 var jName = pickRandom(hamsterNames);
                 names = [jName, jName, jName];
+            } else if (roll < JACKPOT_CHANCE + PARTIAL_MATCH_CHANCE) {
+                var matchName = pickRandom(hamsterNames);
+                var otherName = pickRandom(hamsterNames);
+                while (otherName === matchName) {
+                    otherName = pickRandom(hamsterNames);
+                }
+                var pattern = Math.floor(Math.random() * 3);
+                if (pattern === 0) {
+                    names = [matchName, matchName, otherName];
+                } else if (pattern === 1) {
+                    names = [otherName, matchName, matchName];
+                } else {
+                    names = [matchName, otherName, matchName];
+                }
             } else {
                 names = [pickRandom(hamsterNames), pickRandom(hamsterNames), pickRandom(hamsterNames)];
-                while (names[0] === names[1] && names[1] === names[2]) {
-                    names[2] = pickRandom(hamsterNames);
+                while (names[0] === names[1] || names[1] === names[2] || names[0] === names[2]) {
+                    names = [pickRandom(hamsterNames), pickRandom(hamsterNames), pickRandom(hamsterNames)];
                 }
             }
 
@@ -784,6 +805,12 @@
             ]).then(function(results) {
                 if (results[0] === results[1] && results[1] === results[2]) {
                     showJackpot(results[0]);
+                } else if (results[0] === results[1]) {
+                    showPartialMatch(results, [0, 1]);
+                } else if (results[1] === results[2]) {
+                    showPartialMatch(results, [1, 2]);
+                } else if (results[0] === results[2]) {
+                    showPartialMatch(results, [0, 2]);
                 } else {
                     showResult(results);
                 }
@@ -802,6 +829,17 @@
             });
             playJackpotSound();
             createConfetti();
+        }
+
+        function showPartialMatch(names, matchIndices) {
+            var winLineIds = ['winLine1', 'winLine2', 'winLine3'];
+            matchIndices.forEach(function(idx) {
+                document.getElementById(winLineIds[idx]).classList.add('jackpot');
+            });
+            document.getElementById('result').innerHTML =
+                names[0] + ' - ' + names[1] + ' - ' + names[2] +
+                '<br><small>2 gleich! Fast ein Jackpot!</small>';
+            playPartialWinSound();
         }
 
         function showResult(names) {
