@@ -440,40 +440,11 @@
                     hamsterNames = data.names;
                 })
                 .catch(function() {
-                    hamsterNames = [
-                        "Fl\u00f6ckchen","Kr\u00fcmel","Nussbert","Fips","Wusel","Knabberich","Moppelchen","Puschel","Knirps","Schnuffi",
-                        "Luna","Nala","Lilly","Mimi","Bella","Daisy","Cookie","Lotte","Resi","Amicelli",
-                        "Max","Leo","Bruno","Theo","Fridolin","Rocky","Elvis","Obelix","Speedy","Bilbo",
-                        "Professor Kr\u00fcmel","Sir Nagerlot","Hamzilla","Flitzpiepe","Sir Fuzzy","Winston Whiskers","Hammy McHamsterface",
-                        "Marshmallow","Peanut","Muffin","Cupcake","Honey","Toffee","Cinnamon","Biscuit","Popcorn",
-                        "Cheerio","Pumpkin","Pepper","Chili","Creamy","Wuschel","Zottel","Flecki",
-                        "Nibbles","Gizmo","Whiskers","Fuzzy","Squeaky","Patches","Buttons","Snickers","Twix",
-                        "Oreo","Brownie","Mocha","Caramel","Cappuccino","Espresso","Latte","Cocoa","Truffle",
-                        "Hammy Potter","Chewbacca","Yoda","Gandalf","Frodo","Pippin","Merry","Samwise","Legolas",
-                        "Valiant","Zephyr","Quixote","Galileo","Leonardo","Maximus","Amigo","Amore",
-                        "Flauschi","Knuddel","Schnucki","S\u00fc\u00dfling","Zuckerschnute","Herzchen","Liebling","Sch\u00e4tzchen",
-                        "Chip","Dale","Stuart","Jerry","Remy","Splinter","Speedy Gonzales","Mickey",
-                        "Nugget","Tofu","Sushi","Mochi","Wasabi","Ginger","Sesam","Quinoa",
-                        "Pixel","Nano","Mikro","Mini","Winzig","Zwerg","L\u00fctt","Kurz",
-                        "Socke","Knopf","Kuller","Purzel","Kullerkeks","Pummelchen","Dickerchen","Wonneproppen",
-                        "Turbo","Blitz","Sprint","Racer","Flash","Zoom","D\u00fcse","Sause",
-                        "Schlafm\u00fctze","Tr\u00e4umer","Penner","D\u00f6ser","Kuschel","Schnarch","G\u00e4hn",
-                        "Nussknacker","Hamsterb\u00e4ckchen","Backentasche","Knabbi","Nager","M\u00fcmmler","Mampf",
-                        "Sherlock","Watson","Einstein","Newton","Tesla","Edison","Darwin",
-                        "Schoko","Nougat","Vanille","Erdbeer","Banane","Kirsch","Apfel",
-                        "Kiwi","Mango","Papaya","Ananas","Melone","Beere","Pflaume",
-                        "Zeus","Apollo","Athena","Hera","Poseidon","Hermes","Artemis",
-                        "Thor","Loki","Odin","Freya","Baldur","Heimdall","Frigg",
-                        "Romeo","Julia","Hamlet","Ophelia","Othello","Desdemona","Macbeth",
-                        "Mozart","Beethoven","Bach","Chopin","Vivaldi","Wagner","Verdi",
-                        "Picasso","Monet","Van Gogh","Rembrandt","Michelangelo","Raphael","Botticelli",
-                        "Shakespeare","Goethe","Schiller","Kafka","Hemingway","Tolkien","Rowling",
-                        "Pikachu","Squirtle","Charmander","Bulbasaur","Eevee","Jigglypuff","Snorlax",
-                        "Mario","Luigi","Peach","Yoshi","Bowser","Toad","Wario",
-                        "Sonic","Tails","Knuckles","Shadow","Amy","Rouge","Silver",
-                        "Link","Zelda","Ganondorf","Navi","Epona","Sheik","Midna",
-                        "Kirby","Dedede","Meta Knight","Waddle Dee","Star","Dream"
-                    ];
+                    hamsterNames = ['Error'];
+                    document.getElementById('spinButton').disabled = true;
+                    document.getElementById('lever').classList.add('disabled');
+                    document.getElementById('result').textContent =
+                        'Fehler: hamster_names.json konnte nicht geladen werden!';
                 });
         }
 
