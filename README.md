@@ -1,6 +1,6 @@
 # Hamster-Namengenerator
 
-Browser-basierter Hamster-Namengenerator als interaktiver Einarmiger Bandit mit über 1260 Namen.
+Browser-basierter Hamster-Namengenerator als interaktiver Einarmiger Bandit mit über 1200 echten Hamsternamen.
 
 **Live-Demo:** https://gi007i.github.io/test/hamster.html
 
@@ -12,7 +12,7 @@ Browser-basierter Hamster-Namengenerator als interaktiver Einarmiger Bandit mit 
 - Web Audio API Sound-Effekte
 - Konfetti-Animation bei Jackpot
 - Responsive Design (Desktop & Mobile)
-- 1260+ thematische Hamster-Namen
+- 1200 echte Hamsternamen (niedliche Kosenamen, Essens-Namen, Natur, altdeutsche Namen u.v.m.)
 
 ## Anwendung starten
 
